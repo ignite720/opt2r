@@ -5,9 +5,11 @@
 //! 
 //! ```
 //! use opt2r::OptionToResult;
-//! use opt2r::Result;
 //! 
-//! fn example1(i: i32) -> Result<()> {
+//! const CUSTOM_ERROR_CODE_OPTION_IS_NONE: i32 = 1;
+//! const CUSTOM_ERROR_STR_OPTION_IS_NONE: &str = "Custom Error: Option is None.";
+//! 
+//! fn example1(i: i32) -> opt2r::Result<()> {
 //!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
 //!     let a2 = make_some(i).ok_or_()?;
 //! 
@@ -16,9 +18,18 @@
 //!     Ok(())
 //! }
 //! 
-//! fn example2(i: i32) -> Result<(), String> {
+//! fn example2(i: i32) -> Result<(), i32> {
 //!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
-//!     let a2 = make_some(i).ok_or_()?;
+//!     let a2 = make_some(i).ok_or(opt2r::opt_is_none_i32!())?;
+//! 
+//!     let b = make_none().ok_or(opt2r::err_i32!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
+//! 
+//!     Ok(())
+//! }
+//! 
+//! fn example3(i: i32) -> Result<(), String> {
+//!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
+//!     let a2 = make_some(i).ok_or(opt2r::err_s!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
@@ -27,11 +38,18 @@
 //! 
 //! fn main() {
 //!     if let Err(err) = example1(100) {
-//!         println!("{}", err);
+//!         println!("example1 err={}", err);
 //!     }
+//! 
 //!     if let Err(err) = example2(200) {
-//!         println!("{}", err);
+//!         println!("example2 err={}", err);
 //!     }
+//! 
+//!     if let Err(err) = example3(300) {
+//!         println!("example3 err={}", err);
+//!     }
+//!     
+//!     //example3(300).unwrap();
 //! }
 //! 
 //! fn make_some<T>(v: T) -> Option<T> {
@@ -46,11 +64,13 @@
 #[cfg(feature = "std")]
 extern crate std;
 
-#[macro_use]
+//#[macro_use]
 mod util;
 
-pub const ERR_OPTION_IS_NONE: &str = "Option is None";
-pub const ERR_FAILED_CONVERT_ERROR_TO_TYPE: &str = "Failed to convert Error to type";
+pub const ERROR_CODE_OPTION_IS_NONE: i32 = 1;
+
+pub const STR_OPTION_IS_NONE: &str = "Option is None.";
+pub const STR_FAILED_CONVERT_ERROR_TO_TYPE: &str = "Failed to convert Error to type";
 
 #[cfg(feature = "std")]
 pub use std::error::Error as StdError;
@@ -80,11 +100,11 @@ pub type Result<T, E = Error> = core::result::Result<T, E>;
 
 impl core::fmt::Display for Error {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Error::I32Error(err) => write!(f, "{}", err),
-            Error::U32Error(err) => write!(f, "{}", err),
-            Error::StringError(err) => write!(f, "{}", err),
-        }
+        let type1 = core::any::type_name::<Self>();             // => crate::Error
+        //let type2 = core::any::type_name_of_val(self);          // => crate::Error
+        let type3 = format!("{:?}", self);
+
+        write!(f, "{} :: {}", type1, type3)
     }
 }
 
@@ -96,7 +116,7 @@ impl<T> OptionToResult<T> for Option<T> {
     fn ok_or_(self) -> Result<T> {
         match self {
             Some(v) => Ok(v),
-            None => Err(Error::StringError(ERR_OPTION_IS_NONE.into())),
+            None => Err(opt_is_none!()),
         }
     }
 }
@@ -107,7 +127,7 @@ macro_rules! impl_error_from {
             fn from(value: Error) -> Self {
                 match value {
                     Error::$enum_variant(err) => err,
-                    _ => panic!("{} {}.", ERR_FAILED_CONVERT_ERROR_TO_TYPE, stringify!($for_type)),
+                    _ => panic!("{} {}.", STR_FAILED_CONVERT_ERROR_TO_TYPE, stringify!($for_type)),
                 }
             }
         }
