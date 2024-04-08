@@ -10,8 +10,8 @@
 //! const CUSTOM_ERROR_STR_OPTION_IS_NONE: &str = "Custom Error: Option is None.";
 //! 
 //! fn example1() -> opt2r::Result<()> {
-//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //!     let a = make_some().ok_or_()?;
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
@@ -21,15 +21,15 @@
 //! fn example2() -> Result<(), i32> {
 //!     let a = make_some().ok_or(opt2r::opt_is_none_i32!())?;
 //! 
-//!     let b = make_none().ok_or(opt2r::err_i32!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
 //!     //let b = make_none().ok_or_()?;   // panic!
+//!     let b = make_none().ok_or(opt2r::err_i32!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
 //! 
 //!     Ok(())
 //! }
 //! 
 //! fn example3() -> Result<(), String> {
-//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //!     let a = make_some().ok_or_()?;
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //!     let a = make_some().ok_or(opt2r::err_s!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
 //! 
 //!     let b = make_none().ok_or_()?;
@@ -38,8 +38,8 @@
 //! }
 //! 
 //! fn example4() -> Result<(), opt2r::BoxStdError> {
-//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //!     let a = make_some().ok_or_()?;
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
