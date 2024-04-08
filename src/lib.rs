@@ -9,27 +9,37 @@
 //! const CUSTOM_ERROR_CODE_OPTION_IS_NONE: i32 = 1;
 //! const CUSTOM_ERROR_STR_OPTION_IS_NONE: &str = "Custom Error: Option is None.";
 //! 
-//! fn example1(i: i32) -> opt2r::Result<()> {
-//!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
-//!     let a2 = make_some(i).ok_or_()?;
+//! fn example1() -> opt2r::Result<()> {
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
+//!     let a = make_some().ok_or_()?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
 //!     Ok(())
 //! }
 //! 
-//! fn example2(i: i32) -> Result<(), i32> {
-//!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
-//!     let a2 = make_some(i).ok_or(opt2r::opt_is_none_i32!())?;
+//! fn example2() -> Result<(), i32> {
+//!     let a = make_some().ok_or(opt2r::opt_is_none_i32!())?;
 //! 
 //!     let b = make_none().ok_or(opt2r::err_i32!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
+//!     //let b = make_none().ok_or_()?;   // panic!
 //! 
 //!     Ok(())
 //! }
 //! 
-//! fn example3(i: i32) -> Result<(), String> {
-//!     let a = make_some(i).ok_or(opt2r::opt_is_none!())?;
-//!     let a2 = make_some(i).ok_or(opt2r::err_s!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
+//! fn example3() -> Result<(), String> {
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
+//!     let a = make_some().ok_or_()?;
+//!     let a = make_some().ok_or(opt2r::err_s!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
+//! 
+//!     let b = make_none().ok_or_()?;
+//! 
+//!     Ok(())
+//! }
+//! 
+//! fn example4() -> Result<(), opt2r::BoxStdError> {
+//!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
+//!     let a = make_some().ok_or_()?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
@@ -37,23 +47,27 @@
 //! }
 //! 
 //! fn main() {
-//!     if let Err(err) = example1(100) {
+//!     if let Err(err) = example1() {
 //!         println!("example1 err={}", err);
 //!     }
 //! 
-//!     if let Err(err) = example2(200) {
+//!     if let Err(err) = example2() {
 //!         println!("example2 err={}", err);
 //!     }
 //! 
-//!     if let Err(err) = example3(300) {
+//!     if let Err(err) = example3() {
 //!         println!("example3 err={}", err);
 //!     }
+//! 
+//!     if let Err(err) = example4() {
+//!         println!("example4 err={}", err);
+//!     }
 //!     
-//!     //example3(300).unwrap();
+//!     //example4().unwrap();
 //! }
 //! 
-//! fn make_some<T>(v: T) -> Option<T> {
-//!     Some(v)
+//! fn make_some() -> Option<i32> {
+//!     Some(100)
 //! }
 //! 
 //! fn make_none() -> Option<f64> {
@@ -70,7 +84,6 @@ mod util;
 pub const ERROR_CODE_OPTION_IS_NONE: i32 = 1;
 
 pub const STR_OPTION_IS_NONE: &str = "Option is None.";
-pub const STR_FAILED_CONVERT_ERROR_TO_TYPE: &str = "Failed to convert Error to type";
 
 #[cfg(feature = "std")]
 pub use std::error::Error as StdError;
@@ -121,22 +134,22 @@ impl<T> OptionToResult<T> for Option<T> {
     }
 }
 
-macro_rules! impl_error_from {
+macro_rules! impl_from_error {
     ($for_type:ty, $enum_variant:ident) => {
         impl From<Error> for $for_type {
             fn from(value: Error) -> Self {
                 match value {
                     Error::$enum_variant(err) => err,
-                    _ => panic!("{} {}.", STR_FAILED_CONVERT_ERROR_TO_TYPE, stringify!($for_type)),
+                    _ => panic!("Failed to convert {} to type `{}`.", value, stringify!($for_type)),
                 }
             }
         }
     };
 }
 
-impl_error_from!(i32, I32Error);
-impl_error_from!(u32, U32Error);
-impl_error_from!(String, StringError);
+impl_from_error!(i32, I32Error);
+impl_from_error!(u32, U32Error);
+impl_from_error!(String, StringError);
 
 #[cfg(not(feature = "std"))]
 impl From<Error> for BoxStdError {
