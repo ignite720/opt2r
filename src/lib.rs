@@ -101,7 +101,7 @@ pub trait OptionToResult<T> {
     fn ok_or_(self) -> core::result::Result<T, Error>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum Error {
     I32Error(i32),
@@ -134,7 +134,7 @@ impl<T> OptionToResult<T> for Option<T> {
     }
 }
 
-macro_rules! impl_from_error {
+macro_rules! impl_from_error_for {
     ($for_type:ty, $enum_variant:ident) => {
         impl From<Error> for $for_type {
             fn from(value: Error) -> Self {
@@ -147,9 +147,9 @@ macro_rules! impl_from_error {
     };
 }
 
-impl_from_error!(i32, I32Error);
-impl_from_error!(u32, U32Error);
-impl_from_error!(String, StringError);
+impl_from_error_for!(i32, I32Error);
+impl_from_error_for!(u32, U32Error);
+impl_from_error_for!(String, StringError);
 
 #[cfg(not(feature = "std"))]
 impl From<Error> for BoxStdError {
