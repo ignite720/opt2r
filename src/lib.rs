@@ -21,8 +21,8 @@
 //! fn example2() -> Result<(), i32> {
 //!     let a = make_some().ok_or(opt2r::opt_is_none_i32!())?;
 //! 
-//!     //let b = make_none().ok_or_()?;   // panic!
-//!     let b = make_none().ok_or(opt2r::err_i32!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
+//!     //let b = make_none().ok_or_()?;
+//!     let b = make_none().ok_or(opt2r::err!(CUSTOM_ERROR_CODE_OPTION_IS_NONE))?;
 //! 
 //!     Ok(())
 //! }
@@ -30,14 +30,15 @@
 //! fn example3() -> Result<(), String> {
 //!     let a = make_some().ok_or_()?;
 //!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
-//!     let a = make_some().ok_or(opt2r::err_s!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
+//!     let a = make_some().ok_or(opt2r::err!(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
+//!     let a = make_some().ok_or(opt2r::Error::new(CUSTOM_ERROR_STR_OPTION_IS_NONE))?;
 //! 
 //!     let b = make_none().ok_or_()?;
 //! 
 //!     Ok(())
 //! }
 //! 
-//! fn example4() -> Result<(), opt2r::BoxStdError> {
+//! fn example4() -> Result<(), Box<dyn opt2r::StdError>> {
 //!     let a = make_some().ok_or_()?;
 //!     let a = make_some().ok_or(opt2r::opt_is_none!())?;
 //! 
@@ -48,7 +49,7 @@
 //! 
 //! fn main() {
 //!     if let Err(err) = example1() {
-//!         println!("example1 err={}", err);
+//!         println!("example1 err={}, {}", err, err.error_value());
 //!     }
 //! 
 //!     if let Err(err) = example2() {
@@ -59,11 +60,10 @@
 //!         println!("example3 err={}", err);
 //!     }
 //! 
+//!     //example4().unwrap();
 //!     if let Err(err) = example4() {
 //!         println!("example4 err={}", err);
 //!     }
-//!     
-//!     //example4().unwrap();
 //! }
 //! 
 //! fn make_some() -> Option<i32> {
@@ -95,23 +95,18 @@ pub trait StdError: core::fmt::Debug + core::fmt::Display {
     }
 }
 
-pub type BoxStdError = Box<dyn StdError>;
-
-pub trait OptionToResult<T> {
-    fn ok_or_(self) -> core::result::Result<T, Error>;
+pub trait OptionToResult<T, V> {
+    fn ok_or_(self) -> core::result::Result<T, Error<V>>;
 }
 
 #[derive(Debug, Clone)]
-#[non_exhaustive]
-pub enum Error {
-    I32Error(i32),
-    U32Error(u32),
-    StringError(String),
+pub struct Error<V> {
+    error_value: V,
 }
 
-pub type Result<T, E = Error> = core::result::Result<T, E>;
+pub type Result<T, E = Error<String>> = core::result::Result<T, E>;
 
-impl core::fmt::Display for Error {
+impl<V: core::fmt::Debug> core::fmt::Display for Error<V> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let type1 = core::any::type_name::<Self>();             // => crate::Error
         //let type2 = core::any::type_name_of_val(self);          // => crate::Error
@@ -121,11 +116,11 @@ impl core::fmt::Display for Error {
     }
 }
 
-impl StdError for Error {
+impl<V: core::fmt::Debug> StdError for Error<V> {
     
 }
 
-impl<T> OptionToResult<T> for Option<T> {
+impl<T> OptionToResult<T, String> for Option<T> {
     fn ok_or_(self) -> Result<T> {
         match self {
             Some(v) => Ok(v),
@@ -134,26 +129,38 @@ impl<T> OptionToResult<T> for Option<T> {
     }
 }
 
+impl<V> Error<V> {
+    pub fn new(error_value: V) -> Self {
+        Self {
+            error_value,
+        }
+    }
+
+    pub fn error_value(&self) -> &V {
+        &self.error_value
+    }
+}
+
 macro_rules! impl_from_error_for {
-    ($for_type:ty, $enum_variant:ident) => {
-        impl From<Error> for $for_type {
-            fn from(value: Error) -> Self {
-                match value {
-                    Error::$enum_variant(err) => err,
-                    _ => panic!("Failed to convert {} to type `{}`.", value, stringify!($for_type)),
-                }
+    ($for_type:ty ) => {
+        impl<V> From<Error<V>> for $for_type
+        where
+            V: Into<$for_type>,
+        {
+            fn from(value: Error<V>) -> Self {
+                value.error_value.into()
             }
         }
     };
 }
 
-impl_from_error_for!(i32, I32Error);
-impl_from_error_for!(u32, U32Error);
-impl_from_error_for!(String, StringError);
+impl_from_error_for!(i32);
+impl_from_error_for!(u32);
+impl_from_error_for!(String);
 
 #[cfg(not(feature = "std"))]
-impl From<Error> for BoxStdError {
-    fn from(value: Error) -> Self {
+impl<V: core::fmt::Debug + 'static> From<Error<V>> for Box<dyn StdError> {
+    fn from(value: Error<V>) -> Self {
         Box::new(value)
     }
 }
