@@ -142,7 +142,7 @@ impl<V> Error<V> {
 }
 
 macro_rules! impl_from_error_for {
-    ($for_type:ty ) => {
+    ($for_type:ty) => {
         impl<V> From<Error<V>> for $for_type
         where
             V: Into<$for_type>,
